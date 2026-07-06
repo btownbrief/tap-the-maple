@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2b1a26">
+<title>TAP THE MAPLE — a Btown Games sugaring-season arcade game</title>
+<meta name="description" content="Throw sap spiles into a spinning maple log. Dodge the knots, catch the sap drops, survive the boss logs. Sugaring season never spun so fast.">
+<meta property="og:title" content="TAP THE MAPLE">
+<meta property="og:description" content="Throw sap spiles into a spinning maple log. Dodge the knots, catch the sap drops. A Btown Games production.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://btownbrief.github.io/tap-the-maple/">
+<meta property="og:image" content="https://btownbrief.github.io/tap-the-maple/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="score-wrap">
+      <div id="score">0</div>
+      <div id="score-label">SPILES</div>
+    </div>
+    <div id="level-chip">LEVEL 1</div>
+    <div id="sap-wrap"><span id="sap-icon">🪣</span><span id="sap-count">0</span></div>
+    <div id="banner" class="hidden"></div>
+  </div>
+
+  <button id="mute" aria-label="Toggle sound">🔊</button>
+
+  <!-- Title screen -->
+  <div id="menu" class="screen">
+    <div class="menu-inner">
+      <div id="logo">
+        <div id="logo-leaf">🍁</div>
+        <h1 id="logo-title">TAP<br>THE<br>MAPLE</h1>
+        <div id="tagline">Sugaring season, one spile at a time</div>
+      </div>
+      <div id="howto">
+        TAP to sink a spile into the spinning log.<br>
+        Don't hit another spile. Don't hit a <strong>knot</strong>.<br>
+        Snag 🍯 <strong>sap drops</strong> for bonus points.<br>
+        Every 5th log is a <strong>boss</strong>. Good luck.
+      </div>
+      <button class="cta" id="startBtn">TAP THAT TREE</button>
+      <div id="best-line"></div>
+      <footer id="credit">
+        A Btown Games production · <a href="https://www.btownbrief.com" target="_blank" rel="noopener">Read the Btown Brief →</a>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Game over -->
+  <div id="gameover" class="screen hidden">
+    <div class="menu-inner">
+      <div id="go-stamp"><span id="go-verdict">SEASON'S OVER</span></div>
+      <div id="go-reason"></div>
+      <div id="go-score-wrap">
+        <div id="go-score">0</div>
+        <div id="go-score-label">SPILES SUNK</div>
+        <div id="go-detail"></div>
+        <div id="go-best"></div>
+      </div>
+      <div class="lb hidden" id="lb">
+        <div class="lb-tabs">
+          <button class="lb-chip sel" id="lbThisBtn">🏆 THIS MONTH</button>
+          <button class="lb-chip" id="lbLastBtn">LAST MONTH</button>
+        </div>
+        <div class="lb-status" id="lbStatus"></div>
+        <ol id="lbList"></ol>
+        <div class="lb-form hidden" id="lbForm">
+          <input id="lbNameInput" maxlength="20" placeholder="Your name" autocomplete="off" />
+          <button class="lb-chip" id="lbSaveBtn">SAVE</button>
+        </div>
+        <button class="lb-chip lb-rename" id="lbRenameBtn">✏️ CHANGE NAME</button>
+      </div>
+      <button id="retry">TAP ANOTHER TREE<span class="sub">tap anywhere · space</span></button>
+      <a id="go-brief" href="https://www.btownbrief.com" target="_blank" rel="noopener">🍁 Boil it down with the Btown Brief →</a>
+      <footer id="go-credit">A Btown Games production</footer>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
