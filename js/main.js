@@ -291,6 +291,8 @@ function gameOver(reason) {
 function nextLevel() {
   level++;
   setupLevel(level);
+  state = 'playing';
+  paintHud();
 }
 
 /* ------------------------------------------------------------ particles */
