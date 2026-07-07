@@ -34,12 +34,16 @@ export function levelConfig(n) {
   let preSpiles = n < 4 ? 0 : Math.min(3, Math.floor(Math.random() * (n >= 9 ? 4 : 3)));
   let saps = Math.random() < 0.72 ? 1 + (Math.random() < 0.3 ? 1 : 0) : 0;
 
-  // spin personality
-  let speed = Math.min(1.25 + n * 0.11, 3.4);
+  // spin personality — calm and readable early, escalating to chaos.
+  // Levels 1–2 spin at a steady speed in one direction so new players can
+  // find the rhythm; reversals, wobble, pauses and bursts phase in with level.
+  let speed = Math.min(1.2 + n * 0.11, 3.4);
   let pat = {
-    reverseP: Math.min(0.2 + n * 0.045, 0.6),  // chance a new segment flips direction
-    pauseP: n >= 6 ? 0.1 : 0,                   // chance of a dead stop
-    burstP: n >= 4 ? 0.16 : 0,                  // chance of a speed burst
+    reverseP: n < 3 ? 0 : Math.min(0.12 + (n - 3) * 0.045, 0.6), // flips start at L3
+    pauseP: n >= 6 ? 0.1 : 0,                    // dead stops enter mid-game
+    burstP: n >= 5 ? 0.16 : 0,                   // speed bursts enter mid-game
+    // per-segment speed wobble (± fraction of base): near-steady early, wild late
+    speedVar: Math.min(0.03 + n * 0.028, 0.25),
     segMin: Math.max(0.55, 1.5 - n * 0.06),
     segMax: Math.max(1.0, 2.2 - n * 0.07),
   };
@@ -107,7 +111,9 @@ export class SpinPattern {
       return;
     }
     if (Math.random() < pat.reverseP) this.dir *= -1;
-    let s = speed * (0.75 + Math.random() * 0.5);
+    // wobble scales with level: ~steady early (small speedVar), erratic late
+    const v = pat.speedVar ?? 0.25;
+    let s = speed * (1 + (Math.random() * 2 - 1) * v);
     if (Math.random() < pat.burstP) s *= 1.8;
     this.target = s * this.dir;
     this.timer = pat.segMin + Math.random() * (pat.segMax - pat.segMin);

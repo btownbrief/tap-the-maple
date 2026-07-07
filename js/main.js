@@ -20,7 +20,7 @@ const angDist = (a, b) => {
 const SPILE_TOL = 0.17;  // rad between spile centers = steel on steel
 const KNOT_TOL = 0.26;
 const SAP_TOL = 0.22;
-const THROW_SPEED = 2600; // px/s
+const THROW_SPEED = 3200; // px/s — snappy flight keeps aim honest on tall screens
 
 /* ------------------------------------------------------------ canvas */
 
