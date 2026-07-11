@@ -8,7 +8,7 @@ Log, the Legendary Sugar Maple).
 **Play it:** https://btownbrief.github.io/tap-the-maple/
 
 A [Btown Games](https://www.btownbrief.com) production — the browser arcade of
-the Btown Brief, Burlington, Vermont's newsletter.
+the BTown Brief, Burlington, Vermont's newsletter.
 
 ## Tech
 
