@@ -35,11 +35,10 @@ export function levelConfig(n) {
   let saps = Math.random() < 0.72 ? 1 + (Math.random() < 0.3 ? 1 : 0) : 0;
 
   // spin personality — calm and readable early, escalating to chaos.
-  // Levels 1–2 spin at a steady speed in one direction so new players can
-  // find the rhythm; reversals, wobble, pauses and bursts phase in with level.
+  // Like Knife Hit, the log only ever spins one way (clockwise); difficulty
+  // comes from speed changes: wobble, pauses and bursts phase in with level.
   let speed = Math.min(1.2 + n * 0.11, 3.4);
   let pat = {
-    reverseP: n < 3 ? 0 : Math.min(0.12 + (n - 3) * 0.045, 0.6), // flips start at L3
     pauseP: n >= 6 ? 0.1 : 0,                    // dead stops enter mid-game
     burstP: n >= 5 ? 0.16 : 0,                   // speed bursts enter mid-game
     // per-segment speed wobble (± fraction of base): near-steady early, wild late
@@ -56,15 +55,15 @@ export function levelConfig(n) {
     if (boss.style === 'oldgrowth') {        // gnarled: slow, heavy, knot-riddled
       knots = 4;
       speed *= 0.85;
-      pat = { ...pat, reverseP: 0.65, pauseP: 0.05, burstP: 0.1 };
+      pat = { ...pat, pauseP: 0.08, burstP: 0.2, speedVar: 0.35 };
     } else if (boss.style === 'frozen') {    // icy: fast spins, sudden freezes
       knots = 2;
       speed *= 1.3;
-      pat = { ...pat, reverseP: 0.35, pauseP: 0.38, burstP: 0.15, segMin: 0.4, segMax: 1.1 };
+      pat = { ...pat, pauseP: 0.38, burstP: 0.15, segMin: 0.4, segMax: 1.1 };
     } else {                                  // legendary: chaos incarnate
       knots = 3;
       speed *= 1.2;
-      pat = { ...pat, reverseP: 0.7, pauseP: 0.15, burstP: 0.35, segMin: 0.35, segMax: 0.9 };
+      pat = { ...pat, pauseP: 0.15, burstP: 0.35, speedVar: 0.4, segMin: 0.35, segMax: 0.9 };
     }
   }
 
@@ -87,11 +86,11 @@ export function levelConfig(n) {
 }
 
 // Rolling spin-pattern state machine. Call step(dt); read .vel.
+// Always spins the same direction (clockwise) — only the speed changes.
 export class SpinPattern {
   constructor(cfg) {
     this.cfg = cfg;
-    this.dir = Math.random() < 0.5 ? 1 : -1;
-    this.vel = cfg.speed * this.dir;
+    this.vel = cfg.speed;
     this.target = this.vel;
     this.timer = 0.8;
   }
@@ -102,20 +101,22 @@ export class SpinPattern {
     this.vel += (this.target - this.vel) * Math.min(1, dt * 9);
     return this.vel;
   }
+  // A spile just stuck — the log lurches to a new speed, like Knife Hit.
+  onHit() {
+    this.nextSegment();
+  }
   nextSegment() {
     const { speed, pat } = this.cfg;
-    const r = Math.random();
-    if (r < pat.pauseP) {
+    if (Math.random() < pat.pauseP) {
       this.target = 0;
       this.timer = 0.25 + Math.random() * 0.35;
       return;
     }
-    if (Math.random() < pat.reverseP) this.dir *= -1;
     // wobble scales with level: ~steady early (small speedVar), erratic late
     const v = pat.speedVar ?? 0.25;
     let s = speed * (1 + (Math.random() * 2 - 1) * v);
     if (Math.random() < pat.burstP) s *= 1.8;
-    this.target = s * this.dir;
+    this.target = s;
     this.timer = pat.segMin + Math.random() * (pat.segMax - pat.segMin);
   }
 }

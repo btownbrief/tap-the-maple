@@ -195,6 +195,7 @@ function resolveThrow() {
   score++;
   remaining--;
   logPulse = 1;
+  spin.onHit(); // log lurches to a new speed as spiles pile in
   sound.thunk();
   woodChips();
   popText('+1', CX + 30, CY + R + 10, '#fff3e0');
