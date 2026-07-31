@@ -40,6 +40,46 @@ html, body {
 }
 
 .hidden { display: none !important; }
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+#feel-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px rgba(70, 0, 0, 0);
+  transition: box-shadow 220ms ease;
+}
+#app.last-spile #feel-overlay {
+  box-shadow: inset 0 0 120px rgba(43, 0, 8, 0.42);
+}
+#feel-overlay::before,
+#feel-overlay::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  height: 8vh;
+  background: rgba(20, 9, 15, 0.88);
+  transform: scaleY(0);
+}
+#feel-overlay::before { top: 0; transform-origin: top; }
+#feel-overlay::after { bottom: 0; transform-origin: bottom; }
+#app.boss-intro #feel-overlay::before,
+#app.boss-intro #feel-overlay::after {
+  animation: letterbox 1.05s ease-in-out both;
+}
+@keyframes letterbox {
+  0%, 100% { transform: scaleY(0); }
+  16%, 72% { transform: scaleY(1); }
+}
 
 /* ---------------- HUD ---------------- */
 
@@ -51,6 +91,7 @@ html, body {
   pointer-events: none;
   color: var(--cream);
   text-align: center;
+  z-index: 10;
 }
 #score {
   font-size: 52px;
@@ -98,6 +139,30 @@ html, body {
   border-radius: 999px;
 }
 #sap-count { margin-left: 5px; }
+#remaining-wrap {
+  position: absolute;
+  top: 56px; left: 18px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: var(--cream);
+  opacity: 0.72;
+  transform-origin: left center;
+}
+#remaining-count {
+  font-size: 15px;
+  color: var(--amber-bright);
+}
+#app.last-spile #remaining-wrap {
+  opacity: 1;
+  color: #fff;
+  animation: lastSpilePulse 0.8s ease-in-out infinite;
+}
+#app.last-spile #remaining-count { color: #ff8a73; }
+@keyframes lastSpilePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
 #banner {
   position: absolute;
   top: 120px; left: 0; right: 0;
@@ -111,6 +176,19 @@ html, body {
 @keyframes bannerIn {
   from { transform: scale(0.6); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+#banner.boss-stamp { animation: none; }
+#banner.boss-stamp #banner-text {
+  display: inline-block;
+  max-width: calc(100vw - 24px);
+  font-size: clamp(18px, 6vw, 26px);
+  line-height: 1.05;
+  transform: rotate(-4deg);
+  border: 4px solid var(--amber-bright);
+  border-radius: 10px;
+  padding: 8px 18px;
+  background: rgba(74,28,14,0.84);
+  animation: stampIn 0.3s cubic-bezier(0.2, 2.2, 0.4, 1);
 }
 
 #mute {
@@ -234,7 +312,13 @@ html, body {
 #go-score-label { font-size: 11px; font-weight: 800; letter-spacing: 4px; opacity: 0.7; margin-top: 4px; }
 #go-detail { margin-top: 10px; font-size: 15px; font-weight: 700; color: var(--amber-bright); }
 #go-best { margin-top: 6px; font-size: 14px; font-weight: 700; color: var(--snow); opacity: 0.85; }
-#go-best.new-best { color: var(--amber-bright); opacity: 1; animation: bossPulse 1s infinite; border-radius: 8px; }
+#go-best.new-best { color: var(--amber-bright); opacity: 1; border-radius: 8px; }
+#go-best.record-pending { visibility: hidden; }
+#go-best.record-land { animation: recordLand 0.5s cubic-bezier(0.2, 1.7, 0.35, 1); }
+@keyframes recordLand {
+  from { transform: translateY(12px) scale(0.72); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
 
 #retry {
   display: block;
@@ -320,4 +404,13 @@ html, body {
   #howto { margin-top: 14px; font-size: 13px; }
   #go-score { font-size: 48px; }
   .lb ol { max-height: 20vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+  #feel-overlay { transition: none; }
 }

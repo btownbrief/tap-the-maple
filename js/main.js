@@ -21,6 +21,7 @@ const SPILE_TOL = 0.17;  // rad between spile centers = steel on steel
 const KNOT_TOL = 0.26;
 const SAP_TOL = 0.22;
 const THROW_SPEED = 3200; // px/s — snappy flight keeps aim honest on tall screens
+const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 /* ------------------------------------------------------------ canvas */
 
@@ -55,7 +56,7 @@ function layout() {
 let state = 'menu'; // menu | playing | clearing | failing | over
 let runId = 0;      // guards stale timeouts across fast restarts
 
-let level = 1, score = 0, sap = 0;
+let level = 1, score = 0, sap = 0, streak = 0;
 let cfg = null, faceData = null, faceSeed = 1;
 let spin = null, rot = 0;
 let remaining = 0;
@@ -70,13 +71,16 @@ let particles = []; // { x, y, vx, vy, life, max, r, color, text? }
 let flakes = [], puffs = [], steamT = 0, dripT = 0;
 let tapHintT = 0, thrownOnce = false;
 let overAt = 0;
+let bossIntroT = -1;
+let scoreReveal = null;
 
 let best = Number(localStorage.getItem('ttm-best') || 0);
 let bestLevel = Number(localStorage.getItem('ttm-best-level') || 0);
 
 function initFlakes() {
   flakes = [];
-  for (let i = 0; i < 46; i++) {
+  const count = motionQuery.matches ? 0 : 46;
+  for (let i = 0; i < count; i++) {
     flakes.push({
       x: Math.random() * W, y: Math.random() * H,
       r: 1 + Math.random() * 2.2, v: 18 + Math.random() * 30,
@@ -102,33 +106,44 @@ function setupLevel(n) {
   failSpile = null;
   pieces = [];
   logPulse = 0;
-  logIntro = 0;
+  logIntro = cfg.boss || motionQuery.matches ? 1 : 0;
+  bossIntroT = cfg.boss && !motionQuery.matches ? 0 : -1;
+  app.classList.toggle('boss-intro', bossIntroT >= 0);
+  app.classList.remove('last-spile');
   levelChip.textContent = cfg.boss ? `🌳 ${cfg.boss.name}` : `LEVEL ${n}`;
   levelChip.classList.toggle('boss', !!cfg.boss);
   if (cfg.boss) {
-    showBanner(cfg.boss.name);
+    showBanner(cfg.boss.name, true);
     sound.boss();
+    announce(`Boss log: ${cfg.boss.name}`);
   } else if (n > 1) {
     showBanner(`LEVEL ${n}`);
   }
 }
 
 let bannerTimer = 0;
-function showBanner(text) {
-  banner.textContent = text;
+function showBanner(text, isBoss = false) {
+  bannerText.textContent = text;
+  banner.classList.toggle('boss-stamp', isBoss);
   banner.classList.remove('hidden');
   bannerTimer = 1.3;
 }
 
 /* ------------------------------------------------------------ DOM */
 
-const hud = $('hud'), scoreEl = $('score'), levelChip = $('level-chip');
-const sapCountEl = $('sap-count'), banner = $('banner');
+const app = $('app'), hud = $('hud'), scoreEl = $('score'), levelChip = $('level-chip');
+const sapCountEl = $('sap-count'), remainingCountEl = $('remaining-count');
+const banner = $('banner'), bannerText = $('banner-text'), announcer = $('announcer');
 const menuEl = $('menu'), gameoverEl = $('gameover');
 const bestLine = $('best-line');
 const goVerdict = $('go-verdict'), goReason = $('go-reason'), goScore = $('go-score');
 const goDetail = $('go-detail'), goBest = $('go-best');
 const muteBtn = $('mute');
+const retryBtn = $('retry');
+
+function announce(text) {
+  announcer.textContent = text;
+}
 
 function paintBestLine() {
   bestLine.textContent = best > 0 ? `Best: ${best} spiles · Level ${bestLevel}` : '';
@@ -138,6 +153,8 @@ paintBestLine();
 function paintHud() {
   scoreEl.textContent = score;
   sapCountEl.textContent = sap;
+  remainingCountEl.textContent = remaining;
+  app.classList.toggle('last-spile', state === 'playing' && remaining === 1);
 }
 
 /* ------------------------------------------------------------ game flow */
@@ -148,11 +165,14 @@ function startGame() {
   level = 1;
   score = 0;
   sap = 0;
+  streak = 0;
   timeScale = 1;
   shake = 0;
   thrownOnce = false;
   tapHintT = 0;
   particles = [];
+  scoreReveal = null;
+  goBest.className = '';
   setupLevel(level);
   paintHud();
   menuEl.classList.add('hidden');
@@ -194,12 +214,19 @@ function resolveThrow() {
   stuck.push({ a: entryLocal, rusty: false });
   score++;
   remaining--;
-  logPulse = 1;
+  streak++;
+  logPulse = motionQuery.matches ? 0 : 1;
   spin.onHit(); // log lurches to a new speed as spiles pile in
-  sound.thunk();
+  sound.thunk(streak);
   woodChips();
-  popText('+1', CX + 30, CY + R + 10, '#fff3e0');
+  popText(
+    streak > 1 ? `+1 · ${streak} STREAK` : '+1',
+    CX + 30,
+    CY + R + 10,
+    streakColor(streak),
+  );
   paintHud();
+  if (remaining === 1) announce('One spile left.');
   flying = null;
   if (remaining <= 0) clearLevel();
 }
@@ -244,12 +271,14 @@ function clearLevel() {
 
 function fail(reason) {
   state = 'failing';
+  streak = 0;
+  app.classList.remove('last-spile');
   failT = 0;
-  timeScale = 0.25;
-  shake = 13;
+  timeScale = motionQuery.matches ? 1 : 0.25;
+  shake = motionQuery.matches ? 0 : 13;
   sound.clink();
   const tipY = CY + R - R * 0.16;
-  failSpile = {
+  failSpile = motionQuery.matches ? null : {
     x: CX, y: tipY,
     vx: (Math.random() - 0.5) * 320, vy: 380,
     rot: 0, vr: 9 + Math.random() * 6,
@@ -277,16 +306,37 @@ function gameOver(reason) {
   goReason.textContent = reason === 'knot'
     ? 'THWACK — right into a knot.'
     : 'CLANG — steel on steel.';
-  goScore.textContent = score;
+  goScore.textContent = '0';
   goDetail.textContent = `Level ${level}${cfg.boss ? ` · ${cfg.boss.name}` : ''} · 🪣 ${sap} sap drop${sap === 1 ? '' : 's'}`;
   goBest.textContent = isBest ? '🍁 NEW SUGARBUSH RECORD!' : `Best: ${best} · Level ${bestLevel}`;
-  goBest.className = isBest ? 'new-best' : '';
+  goBest.className = isBest ? 'new-best record-pending' : '';
   paintBestLine();
   overAt = performance.now();
+  const id = runId;
   setTimeout(() => {
-    if (state === 'over') gameoverEl.classList.remove('hidden');
+    if (id !== runId || state !== 'over') return;
+    gameoverEl.classList.remove('hidden');
+    retryBtn.focus({ preventScroll: true });
+    beginScoreReveal(score, isBest, id);
   }, 350);
   updateLeaderboard(score); // submits exactly once per run (only called here)
+}
+
+function beginScoreReveal(target, isBest, id) {
+  if (motionQuery.matches) {
+    goScore.textContent = target;
+    if (isBest) revealRecord(id);
+    return;
+  }
+  scoreReveal = { target, isBest, id, elapsed: 0, duration: 0.65 };
+}
+
+function revealRecord(id) {
+  if (id !== runId || state !== 'over') return;
+  goBest.classList.remove('record-pending');
+  goBest.classList.add('record-land');
+  sound.fanfare();
+  announce(`New sugarbush record: ${score} spiles.`);
 }
 
 function nextLevel() {
@@ -299,6 +349,7 @@ function nextLevel() {
 /* ------------------------------------------------------------ particles */
 
 function woodChips() {
+  if (motionQuery.matches) return;
   const y = CY + R;
   for (let i = 0; i < 10; i++) {
     const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
@@ -314,6 +365,7 @@ function woodChips() {
 }
 
 function splashSap() {
+  if (motionQuery.matches) return;
   const y = CY + R + 8;
   for (let i = 0; i < 8; i++) {
     particles.push({
@@ -325,7 +377,15 @@ function splashSap() {
 }
 
 function popText(text, x, y, color) {
-  particles.push({ x, y, vx: 0, vy: -46, life: 0, max: 0.85, r: 0, color, text });
+  const vy = motionQuery.matches ? 0 : -46;
+  particles.push({ x, y, vx: 0, vy, life: 0, max: 0.85, r: 0, color, text });
+}
+
+function streakColor(count) {
+  if (count >= 10) return '#ff7667';
+  if (count >= 6) return '#ff9f43';
+  if (count >= 3) return '#ffc95e';
+  return '#fff3e0';
 }
 
 /* ------------------------------------------------------------ update */
@@ -343,7 +403,7 @@ function frame(now) {
 function update(dt, realDt) {
   // ambient
   steamT -= realDt;
-  if (steamT <= 0 && bg) {
+  if (steamT <= 0 && bg && !motionQuery.matches) {
     steamT = 0.28;
     puffs.push({ x: bg.chimney.x, y: bg.chimney.y, r: 4, life: 0, max: 3.2 + Math.random() });
   }
@@ -369,9 +429,34 @@ function update(dt, realDt) {
   shake = Math.max(0, shake - realDt * 26);
   logPulse = Math.max(0, logPulse - realDt * 5);
   logIntro = Math.min(1, logIntro + realDt * 4.5);
+  if (bossIntroT >= 0) {
+    bossIntroT += realDt;
+    if (bossIntroT >= 1.05) {
+      bossIntroT = -1;
+      app.classList.remove('boss-intro');
+    }
+  }
+
+  if (scoreReveal) {
+    if (scoreReveal.id !== runId || state !== 'over') {
+      scoreReveal = null;
+    } else {
+      scoreReveal.elapsed += realDt;
+      const p = Math.min(1, scoreReveal.elapsed / scoreReveal.duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      goScore.textContent = Math.round(scoreReveal.target * eased);
+      if (p >= 1) {
+        const { id, isBest } = scoreReveal;
+        goScore.textContent = scoreReveal.target;
+        scoreReveal = null;
+        if (isBest) revealRecord(id);
+      }
+    }
+  }
 
   if (state === 'playing' || state === 'failing') {
-    rot += spin.step(dt) * dt;
+    const tensionSlow = state === 'playing' && remaining === 1 ? 0.82 : 1;
+    rot += spin.step(dt) * dt * tensionSlow;
 
     if (state === 'playing' && !thrownOnce) tapHintT += realDt;
 
@@ -404,16 +489,18 @@ function update(dt, realDt) {
       f.rot += f.vr * dt;
     }
     // ease back to real time as the moment sinks in
-    timeScale = Math.min(1, 0.25 + failT * 0.9);
+    if (!motionQuery.matches) timeScale = Math.min(1, 0.25 + failT * 0.9);
   }
 
   if (state === 'clearing') {
     clearT += realDt;
-    for (const p of pieces) {
-      p.vy += 900 * realDt;
-      p.x += p.vx * realDt;
-      p.y += p.vy * realDt;
-      p.rot += p.vr * realDt;
+    if (!motionQuery.matches) {
+      for (const p of pieces) {
+        p.vy += 900 * realDt;
+        p.x += p.vx * realDt;
+        p.y += p.vy * realDt;
+        p.rot += p.vr * realDt;
+      }
     }
     if (clearT > 0.85) nextLevel();
   }
@@ -426,6 +513,7 @@ function update(dt, realDt) {
     p.y += p.vy * realDt;
     if (p.life > p.max) particles.splice(i, 1);
   }
+  if (particles.length > 40) particles.splice(0, particles.length - 40);
 }
 
 /* ------------------------------------------------------------ draw */
@@ -470,7 +558,7 @@ function draw(t) {
   if (state === 'clearing') {
     // exploded log quadrants + freed spiles
     for (const p of pieces) {
-      const a = Math.max(0, 1 - clearT / 0.85);
+      const a = motionQuery.matches ? 1 : Math.max(0, 1 - clearT / 0.85);
       ctx.globalAlpha = a;
       ctx.save();
       ctx.translate(p.x, p.y);
@@ -485,7 +573,12 @@ function draw(t) {
     }
     ctx.globalAlpha = 1;
   } else {
-    const scale = (0.8 + 0.2 * logIntro) * (1 + logPulse * 0.045);
+    let bossZoom = 1;
+    if (bossIntroT >= 0) {
+      const p = Math.min(1, bossIntroT / 0.75);
+      bossZoom = 0.86 + 0.14 * (1 - Math.pow(1 - p, 3));
+    }
+    const scale = (0.8 + 0.2 * logIntro) * bossZoom * (1 + logPulse * 0.045);
 
     // boss glow
     if (faceData.glow) {
@@ -511,6 +604,8 @@ function draw(t) {
     ctx.scale(scale, scale);
     ctx.drawImage(faceData.canvas, -faceData.half, -faceData.half);
     ctx.restore();
+
+    drawDangerArc(scale);
 
     // sap drops riding the rim
     for (const a of sapsLeft) {
@@ -571,6 +666,29 @@ function draw(t) {
     }
   }
 
+  ctx.restore();
+}
+
+function drawDangerArc(scale) {
+  if (state !== 'playing' || flying) return;
+  const entryLocal = norm(ENTRY - rot);
+  let danger = 0;
+  for (const s of stuck) {
+    danger = Math.max(danger, 1 - angDist(entryLocal, s.a) / (SPILE_TOL * 1.5));
+  }
+  for (const k of cfg.knotAngles) {
+    danger = Math.max(danger, 1 - angDist(entryLocal, k) / (KNOT_TOL * 1.5));
+  }
+  if (danger <= 0) return;
+  ctx.save();
+  ctx.strokeStyle = `rgba(255,78,70,${0.18 + danger * 0.42})`;
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.shadowColor = `rgba(255,40,35,${0.35 + danger * 0.35})`;
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.arc(CX, CY, R * scale + 5, ENTRY - 0.22, ENTRY + 0.22);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -675,7 +793,7 @@ $('startBtn').addEventListener('click', () => {
   sound.click();
   startGame();
 });
-$('retry').addEventListener('click', (e) => e.stopPropagation());
+retryBtn.addEventListener('click', (e) => e.stopPropagation());
 
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
