@@ -23,6 +23,7 @@
 <body>
 <div id="app">
   <canvas id="game"></canvas>
+  <div id="feel-overlay" aria-hidden="true"></div>
 
   <!-- HUD -->
   <div id="hud" class="hidden">
@@ -32,7 +33,9 @@
     </div>
     <div id="level-chip">LEVEL 1</div>
     <div id="sap-wrap"><span id="sap-icon">🪣</span><span id="sap-count">0</span></div>
-    <div id="banner" class="hidden"></div>
+    <div id="remaining-wrap"><span id="remaining-count">0</span> LEFT</div>
+    <div id="banner" class="hidden" aria-hidden="true"><span id="banner-text"></span></div>
+    <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>
   </div>
 
   <button id="mute" aria-label="Toggle sound">🔊</button>

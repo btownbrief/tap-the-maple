@@ -79,9 +79,10 @@ class SoundEngine {
   }
 
   // Spile bites the log: deep THUNK + wood knock
-  thunk() {
+  thunk(streak = 1) {
     if (!this.ready()) return;
-    const v = 0.92 + Math.random() * 0.16;
+    const rise = Math.min(1.32, 1 + Math.max(0, streak - 1) * 0.035);
+    const v = rise * (0.96 + Math.random() * 0.08);
     this._tone(105 * v, 0.1, { type: 'sine', gain: 0.55, slideTo: 42 });
     this._noise(0.06, { type: 'lowpass', freq: 900 * v, gain: 0.4 });
     this._noise(0.03, { type: 'bandpass', freq: 2400 * v, q: 1.4, gain: 0.14 });
